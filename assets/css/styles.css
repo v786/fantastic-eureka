@@ -1,0 +1,88 @@
+* { box-sizing: border-box; }
+body {
+  margin: 0;
+  background: #101014;
+  color: #ddd;
+  font-family: Consolas, monospace;
+  display: flex;
+  justify-content: center;
+  min-height: 100vh;
+  padding: 24px 10px;
+}
+.game { width: min(100%, 1000px); }
+h1 { color: #d8b46a; text-align: center; letter-spacing: 5px; }
+.layout {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 190px;
+  gap: 12px;
+}
+canvas {
+  width: 100%;
+  height: auto;
+  background: #09090d;
+  border: 2px solid #554832;
+  image-rendering: pixelated;
+}
+.panel {
+  background: #19191f;
+  border: 1px solid #39343a;
+  padding: 14px;
+  line-height: 1.8;
+}
+.panel h3 { color: #d8b46a; margin-top: 0; }
+.stat { color: #a5c77d; }
+#log {
+  height: 120px;
+  overflow: auto;
+  background: #19191f;
+  padding: 10px;
+  margin-top: 12px;
+  border: 1px solid #39343a;
+  font-size: 12px;
+  line-height: 1.7;
+}
+.controls {
+  color: #999;
+  text-align: center;
+  font-size: 12px;
+  margin-top: 12px;
+}
+button {
+  background: #544329;
+  border: 1px solid #c49a54;
+  color: white;
+  padding: 10px 15px;
+  cursor: pointer;
+  font-family: inherit;
+}
+button:hover { background: #765c32; }
+.modal {
+  position: fixed; inset: 0; z-index: 20;
+  background: rgba(5,5,8,.92); display: flex;
+  align-items: center; justify-content: center; padding: 20px;
+}
+.modal.hidden { display: none; }
+.modal-card {
+  width: min(760px, 100%); max-height: 90vh; overflow: auto;
+  background: #19191f; border: 2px solid #554832; padding: 22px;
+}
+.modal-card h2 { color: #d8b46a; margin-top: 0; text-align: center; }
+.class-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; }
+.class-card { border: 1px solid #4a454d; padding: 14px; background: #222229; }
+.class-card h3 { margin: 0 0 6px; color: #f3d37b; }
+.class-card p { font-size: 12px; min-height: 50px; line-height: 1.5; }
+.class-card button { width: 100%; }
+.skill-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; }
+.skill { border: 1px solid #45404a; background: #222229; padding: 12px; text-align: center; }
+.skill.locked { opacity: .55; }
+.skill.learned { border-color: #9bcf78; background: #263026; }
+.skill-name { color: #d8b46a; font-weight: bold; }
+.skill-desc { min-height: 48px; font-size: 12px; line-height: 1.5; }
+.skill button { width: 100%; margin-top: 8px; }
+#xpBar { height: 8px; background: #29272d; border: 1px solid #45404a; margin: 7px 0; }
+#xpFill { height: 100%; width: 0; background: #80c6dc; }
+@media(max-width:650px) {
+  .layout { grid-template-columns: 1fr; }
+  .panel { display: grid; grid-template-columns: 1fr 1fr; gap: 5px; }
+  .class-grid, .skill-grid { grid-template-columns: 1fr; }
+}
