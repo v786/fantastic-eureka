@@ -438,6 +438,42 @@ function drawText(char,x,y,color) {
   ctx.fillText(char,x+2,y);
 }
 
+document.querySelectorAll("[data-action]").forEach(button=>{
+  button.addEventListener("pointerdown",e=>{
+    e.preventDefault();
+    if(gameOver) return;
+
+    const action=button.dataset.action;
+    if(action==="up") move(0,-1);
+    else if(action==="down") move(0,1);
+    else if(action==="left") move(-1,0);
+    else if(action==="right") move(1,0);
+    else if(action==="wait") endTurn();
+    else if(action==="pickup") pickupAction();
+    else if(action==="heal") usePotion();
+  });
+});
+
+let swipeStart=null;
+canvas.addEventListener("pointerdown",e=>{
+  swipeStart={x:e.clientX,y:e.clientY};
+  canvas.setPointerCapture?.(e.pointerId);
+});
+canvas.addEventListener("pointerup",e=>{
+  if(!swipeStart||gameOver) { swipeStart=null; return; }
+  const dx=e.clientX-swipeStart.x;
+  const dy=e.clientY-swipeStart.y;
+  swipeStart=null;
+  if(Math.max(Math.abs(dx),Math.abs(dy))<24) return;
+  if(Math.abs(dx)>Math.abs(dy)) move(dx>0?1:-1,0);
+  else move(0,dy>0?1:-1);
+});
+
+window.addEventListener("orientationchange",()=>{
+  updateUI();
+  render();
+});
+
 document.addEventListener("keydown",e=>{
   const k=e.key.toLowerCase();
   const keys=["arrowup","arrowdown","arrowleft","arrowright"," "];

@@ -25,6 +25,8 @@ Then visit `http://127.0.0.1:4173/`.
 | Space | Wait one turn |
 | `R` | Restart after death |
 
+On mobile devices, use the fixed on-screen directional pad to move and the **Wait**, **Pick up**, and **Potion** buttons for actions. The dungeon canvas also supports swipe gestures: swipe up, down, left, or right to move in that direction.
+
 Movement and combat are turn-based. Moving into a monster attacks it; waiting or performing another valid action advances the turn and allows nearby monsters to act.
 
 ## Objective
@@ -201,6 +203,9 @@ When HP reaches zero:
 - The game uses an 800 × 600 canvas with 16 × 16 tile rendering.
 - The dungeon and character panels are arranged side by side on wide screens.
 - On narrow screens, the layout becomes a single column and class/skill cards stack vertically.
+- Mobile and coarse-pointer devices receive a fixed touch D-pad and action buttons with large tap targets.
+- The Canvas also accepts directional swipe gestures on mobile.
+- Touch interactions prevent accidental page scrolling while controlling the game.
 - The latest 7 event messages are shown in the activity log, with newest events at the top.
 
 ## Project Structure
