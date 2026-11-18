@@ -8,77 +8,55 @@
 <link rel="stylesheet" href="assets/css/styles.css">
 </head>
 <body>
-<div class="game">
-<h1>THE DEPTHS</h1>
-<div class="layout">
-  <canvas id="game" width="800" height="600"></canvas>
-  <div class="panel">
-    <div>
-      <h3>CHARACTER</h3>
-      <div class="stat" id="hp"></div>
-      <div id="className"></div>
-      <div id="level"></div>
-      <div id="xpText"></div>
-      <div id="xpBar"><div id="xpFill"></div></div>
-      <div id="skillPoints"></div>
-      <div id="attack"></div>
-      <div id="gold"></div>
-      <br>
-      <button onclick="openSkills()">Skill tree</button>
+<main class="game">
+  <h1>THE DEPTHS</h1>
+  <div class="game-layout">
+    <div class="game-column">
+      <canvas id="game" width="800" height="600" aria-label="The Depths roguelike game"></canvas>
+
+      <div class="touch-controls" aria-label="Game controls">
+        <div class="dpad">
+          <button type="button" data-action="up" aria-label="Move up">▲</button>
+          <button type="button" data-action="left" aria-label="Move left">◀</button>
+          <span></span>
+          <button type="button" data-action="right" aria-label="Move right">▶</button>
+          <button type="button" data-action="down" aria-label="Move down">▼</button>
+        </div>
+        <div class="action-controls">
+          <button type="button" data-action="wait">Wait</button>
+          <button type="button" data-action="pickup">Pick up</button>
+          <button type="button" data-action="heal">Potion</button>
+          <button type="button" onclick="openSkills()">Skills</button>
+        </div>
+      </div>
     </div>
-    <div>
-      <h3>INVENTORY</h3>
-      <div id="potions"></div>
-      <div id="weapon"></div>
-      <br>
-      <button onclick="usePotion()">Drink potion [H]</button>
-      <br><br>
-      <button onclick="restart()">New game</button>
-    </div>
-  </div>
-</div>
-<div id="log"></div>
-<div class="controls">
-  WASD / ARROWS: Move | G: Pick up | H: Heal | SPACE: Wait
-  <br>Defeat monsters, find treasure, and descend into the darkness.
-</div>
-</div>
 
-<div id="mobileControls" class="mobile-controls" aria-label="Touch game controls">
-  <div class="dpad">
-    <button type="button" class="dpad-up" data-action="up" aria-label="Move up">▲</button>
-    <button type="button" class="dpad-left" data-action="left" aria-label="Move left">◀</button>
-    <button type="button" class="dpad-center" aria-hidden="true"></button>
-    <button type="button" class="dpad-right" data-action="right" aria-label="Move right">▶</button>
-    <button type="button" class="dpad-down" data-action="down" aria-label="Move down">▼</button>
+    <aside class="side-panel">
+      <section>
+        <h2>Character</h2>
+        <div id="className"></div>
+        <div id="level"></div>
+        <div id="hp"></div>
+        <div id="attack"></div>
+        <div id="xpText"></div>
+        <div class="xp-track"><div id="xpFill"></div></div>
+        <div id="skillPoints"></div>
+      </section>
+      <section>
+        <h2>Inventory</h2>
+        <div id="gold"></div>
+        <div id="potions"></div>
+        <div id="weapon"></div>
+      </section>
+      <section class="log-section">
+        <h2>Activity</h2>
+        <div id="log"></div>
+      </section>
+      <button type="button" id="resumeButton" onclick="resumeGame()" hidden>Resume game</button>
+      <button type="button" onclick="restart()">New game</button>
+    </aside>
   </div>
-  <div class="action-buttons">
-    <button type="button" data-action="wait">Wait</button>
-    <button type="button" data-action="pickup">Pick up</button>
-    <button type="button" data-action="heal">Potion</button>
-  </div>
-</div>
-
-<div id="classModal" class="modal">
-  <div class="modal-card">
-    <h2>CHOOSE YOUR CLASS</h2>
-    <div class="class-grid">
-      <div class="class-card"><h3>Vanguard</h3><p>Durable fighter. Starts with 42 HP and 5 attack.</p><button onclick="startGame('vanguard')">Become Vanguard</button></div>
-      <div class="class-card"><h3>Ranger</h3><p>Swift explorer. Starts with 34 HP, 6 attack, and 3 potions.</p><button onclick="startGame('ranger')">Become Ranger</button></div>
-      <div class="class-card"><h3>Arcanist</h3><p>Powerful mage. Starts with 28 HP, 8 attack, and 4 potions.</p><button onclick="startGame('arcanist')">Become Arcanist</button></div>
-    </div>
-  </div>
-</div>
-
-<div id="skillModal" class="modal hidden">
-  <div class="modal-card">
-    <h2>SKILL TREE</h2>
-    <div id="skillPointsHeader"></div>
-    <div id="skillGrid" class="skill-grid"></div>
-    <br><button onclick="closeSkills()">Return to dungeon</button>
-  </div>
-</div>
-
+</main>
 <script src="assets/js/game.js"></script>
 </body>
 </html>

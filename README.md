@@ -25,7 +25,7 @@ Then visit `http://127.0.0.1:4173/`.
 | Space | Wait one turn |
 | `R` | Restart after death |
 
-On mobile devices, use the fixed on-screen directional pad to move and the **Wait**, **Pick up**, and **Potion** buttons for actions. The dungeon canvas also supports swipe gestures: swipe up, down, left, or right to move in that direction.
+On mobile devices, swipe the Canvas up, down, left, or right to move. The Canvas also provides on-screen **Potion** and **Skills** buttons.
 
 Movement and combat are turn-based. Moving into a monster attacks it; waiting or performing another valid action advances the turn and allows nearby monsters to act.
 
@@ -202,9 +202,9 @@ When HP reaches zero:
 
 - The game uses an 800 × 600 canvas with 16 × 16 tile rendering.
 - The dungeon and character panels are arranged side by side on wide screens.
-- On narrow screens, the layout becomes a single column and class/skill cards stack vertically.
-- Mobile and coarse-pointer devices receive a fixed touch D-pad and action buttons with large tap targets.
-- The Canvas also accepts directional swipe gestures on mobile.
+- The class selection, skill tree, dungeon HUD, inventory actions, and death screen are rendered directly by the Canvas.
+- On narrow screens, the Canvas scales responsively while preserving the 800 × 600 game coordinate system.
+- Mobile and coarse-pointer devices use Canvas swipe gestures and large on-screen action areas.
 - Touch interactions prevent accidental page scrolling while controlling the game.
 - The latest 7 event messages are shown in the activity log, with newest events at the top.
 
@@ -212,7 +212,7 @@ When HP reaches zero:
 
 ```text
 fantastic-eureka/
-├── index.html              # Page markup and UI containers
+├── index.html              # Minimal page markup and Canvas host
 ├── README.md               # Project and gameplay documentation
 └── assets/
     ├── css/
@@ -223,9 +223,13 @@ fantastic-eureka/
 
 ## Technical Notes
 
-- `index.html` contains the semantic page structure and Canvas element.
-- `assets/css/styles.css` contains all presentation styles.
-- `assets/js/game.js` contains all JavaScript and Canvas API logic.
+- `index.html` contains the minimal page structure and Canvas element.
+- `assets/css/styles.css` contains page and responsive Canvas sizing styles.
+- `assets/js/game.js` contains all game logic and Canvas rendering for menus, HUD, combat, and overlays.
 - The game does not require a build step or external dependencies.
 - Character, enemy, dungeon, item, and UI state are maintained in browser memory.
-- Reloading or restarting begins a fresh run.
+- Reloading or restarting begins a fresh run unless **Resume game** is selected.
+- The active dungeon, player, monsters, items, visibility, messages, XP, skill progress, and turn state are stored in browser `localStorage` under `the-depths-save-v1`.
+- Resume controls appear in the class screen and character panel when a valid save exists.
+- Starting a different class replaces the previous save; the previous save remains available until that new game is started.
+- Saved data stays in the current browser and origin and may be cleared by browser storage settings.

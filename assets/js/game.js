@@ -17,6 +17,9 @@ const COLORS = {
 let map, visible, explored, monsters, items;
 let player, depth, gameOver, turn;
 let messages = [];
+let canvasScreen = "class";
+let canvasActions = [];
+const SAVE_KEY="the-depths-save-v1";
 
 const CLASS_STATS = {
   vanguard: {name:"Vanguard", maxHp:42, atk:5, potions:2},
@@ -45,16 +48,70 @@ const SKILLS = {
 function log(msg) {
   messages.unshift(msg);
   messages = messages.slice(0, 7);
-  document.getElementById("log").innerHTML =
-    messages.map(m => `<div>${m}</div>`).join("");
+  const logElement=document.getElementById("log");
+  if(logElement) logElement.innerHTML=messages.map(m=>`<div>${m}</div>`).join("");
 }
 
 function random(min, max) {
   return Math.floor(Math.random() * (max-min+1))+min;
 }
 
+function saveGame() {
+  if(!player||!map) return;
+  try {
+    localStorage.setItem(SAVE_KEY,JSON.stringify({
+      map,visible,explored,monsters,items,player,depth,gameOver,messages
+    }));
+    updateResumeButtons();
+  } catch(error) {
+    console.warn("Could not save The Depths game:",error);
+  }
+}
+
+function hasSavedGame() {
+  try { return localStorage.getItem(SAVE_KEY)!==null; }
+  catch(error) { return false; }
+}
+
+function updateResumeButtons() {
+  const resumeButton=document.getElementById("resumeButton");
+  if(resumeButton) resumeButton.hidden=!hasSavedGame();
+}
+
+function resumeGame() {
+  try {
+    const raw=localStorage.getItem(SAVE_KEY);
+    if(!raw) return;
+    const saved=JSON.parse(raw);
+    if(!saved.player||!saved.map||!saved.monsters||!saved.items) return;
+
+    map=saved.map;
+    visible=saved.visible||Array.from({length:H},()=>Array(W).fill(false));
+    explored=saved.explored||Array.from({length:H},()=>Array(W).fill(false));
+    monsters=saved.monsters;
+    items=saved.items;
+    player=saved.player;
+    depth=saved.depth||1;
+    gameOver=Boolean(saved.gameOver);
+    messages=Array.isArray(saved.messages)?saved.messages.slice(0,7):[];
+    canvasScreen="game";
+    updateResumeButtons();
+    updateUI();
+  } catch(error) {
+    console.warn("Could not resume The Depths game:",error);
+  }
+}
+
+function clearSavedGame() {
+  try { localStorage.removeItem(SAVE_KEY); }
+  catch(error) { console.warn("Could not clear saved game:",error); }
+  updateResumeButtons();
+}
+
 function openClassModal() {
-  document.getElementById("classModal").classList.remove("hidden");
+  canvasScreen="class";
+  updateResumeButtons();
+  render();
 }
 
 function restart() {
@@ -73,10 +130,10 @@ function startGame(classId) {
     characterLevel:1,xp:0,xpNeeded:40,skillPoints:0,
     learnedSkills:[],damageReduction:0
   };
-  document.getElementById("classModal").classList.add("hidden");
-  document.getElementById("skillModal").classList.add("hidden");
+  canvasScreen="game";
   generateDungeon();
   log("You awaken in the depths as a "+stats.name+"...");
+  saveGame();
 }
 
 function generateDungeon() {
@@ -241,6 +298,7 @@ function pickupAction() {
   let item=itemAt(player.x,player.y);
   if(item) pickup(item);
   else log("There is nothing here.");
+  saveGame();
   render();
 }
 
@@ -267,6 +325,7 @@ function descend() {
   player.hp=Math.min(player.maxHp,player.hp+8);
   log("You descend to dungeon level "+depth+"...");
   generateDungeon();
+  saveGame();
   render();
 }
 
@@ -285,20 +344,23 @@ function gainXP(amount) {
 }
 
 function openSkills() {
-  if(gameOver) return;
-  renderSkillTree();
-  document.getElementById("skillModal").classList.remove("hidden");
+  if(gameOver||!player) return;
+  canvasScreen="skills";
+  render();
 }
 
 function closeSkills() {
-  document.getElementById("skillModal").classList.add("hidden");
+  canvasScreen="game";
+  render();
 }
 
 function renderSkillTree() {
   if(!player) return;
-  document.getElementById("skillPointsHeader").textContent=
-    "Available skill points: "+player.skillPoints;
-  document.getElementById("skillGrid").innerHTML=SKILLS[player.classId].map(skill=>{
+  const header=document.getElementById("skillPointsHeader");
+  const grid=document.getElementById("skillGrid");
+  if(header) header.textContent="Available skill points: "+player.skillPoints;
+  if(!grid) { render(); return; }
+  grid.innerHTML=SKILLS[player.classId].map(skill=>{
     const learned=player.learnedSkills.includes(skill.id);
     const requirementMet=!skill.requires||player.learnedSkills.includes(skill.requires);
     const canLearn=!learned&&requirementMet&&player.skillPoints>=skill.cost;
@@ -318,6 +380,7 @@ function learnSkill(skillId) {
   player.learnedSkills.push(skillId);
   skill.apply(player);
   log("You learned "+skill.name+".");
+  saveGame();
   updateUI();
   renderSkillTree();
 }
@@ -354,81 +417,157 @@ function endTurn() {
   }
 
   updateVisibility();
+  saveGame();
   updateUI();
   render();
 }
 
 function updateUI() {
-  document.getElementById("hp").textContent=
-    "HP: "+player.hp+" / "+player.maxHp;
-  document.getElementById("level").textContent="Level: "+player.characterLevel+" | Dungeon: "+depth;
-  document.getElementById("className").textContent="Class: "+CLASS_STATS[player.classId].name;
-  document.getElementById("xpText").textContent="XP: "+player.xp+" / "+player.xpNeeded;
-  document.getElementById("xpFill").style.width=(player.xp/player.xpNeeded*100)+"%";
-  document.getElementById("skillPoints").textContent="Skill points: "+player.skillPoints;
-  document.getElementById("attack").textContent="Attack: "+player.atk;
-  document.getElementById("gold").textContent="Gold: "+player.gold;
-  document.getElementById("potions").textContent="Potions: "+player.potions;
-  document.getElementById("weapon").textContent="Weapon: "+player.weapon;
+  if(!player) return;
+  const hp=document.getElementById("hp");
+  if(hp) hp.textContent="HP: "+player.hp+" / "+player.maxHp;
+  const fields={
+    level:"Level: "+player.characterLevel+" | Dungeon: "+depth,
+    className:"Class: "+CLASS_STATS[player.classId].name,
+    xpText:"XP: "+player.xp+" / "+player.xpNeeded,
+    skillPoints:"Skill points: "+player.skillPoints,
+    attack:"Attack: "+player.atk,
+    gold:"Gold: "+player.gold,
+    potions:"Potions: "+player.potions,
+    weapon:"Weapon: "+player.weapon
+  };
+  Object.entries(fields).forEach(([id,text])=>{
+    const element=document.getElementById(id);
+    if(element) element.textContent=text;
+  });
+  const xpFill=document.getElementById("xpFill");
+  if(xpFill) xpFill.style.width=(player.xp/player.xpNeeded*100)+"%";
+  render();
 }
 
-function render() {
-  ctx.fillStyle="#09090d";
-  ctx.fillRect(0,0,canvas.width,canvas.height);
+function canvasButton(x,y,w,h,label,action,fill="#544329") {
+  canvasActions.push({x,y,w,h,action});
+  ctx.fillStyle=fill;
+  ctx.fillRect(x,y,w,h);
+  ctx.strokeStyle="#c49a54";
+  ctx.strokeRect(x,y,w,h);
+  ctx.fillStyle="#fff";
+  ctx.font="bold 16px Consolas";
+  ctx.textAlign="center";
+  ctx.textBaseline="middle";
+  ctx.fillText(label,x+w/2,y+h/2);
+  ctx.textAlign="left";
+  ctx.textBaseline="alphabetic";
+}
 
+function renderClassScreen() {
+  ctx.fillStyle="#09090d";
+  ctx.fillRect(0,0,800,600);
+  ctx.fillStyle="#d8b46a";
+  ctx.font="bold 34px Consolas";
+  ctx.textAlign="center";
+  ctx.fillText("CHOOSE YOUR CLASS",400,55);
+  if(hasSavedGame()) canvasButton(300,65,200,44,"Resume saved game",resumeGame,"#765c32");
+  const classes=[
+    ["vanguard","Vanguard","42 HP / 5 ATK","2 potions"],
+    ["ranger","Ranger","34 HP / 6 ATK","3 potions"],
+    ["arcanist","Arcanist","28 HP / 8 ATK","4 potions"]
+  ];
+  classes.forEach((item,index)=>{
+    const x=35+index*250;
+    ctx.fillStyle="#222229";
+    ctx.fillRect(x,100,220,380);
+    ctx.strokeStyle="#554832";
+    ctx.strokeRect(x,100,220,380);
+    ctx.fillStyle="#f3d37b";
+    ctx.font="bold 24px Consolas";
+    ctx.fillText(item[1],x+110,155);
+    ctx.fillStyle="#ddd";
+    ctx.font="16px Consolas";
+    ctx.fillText(item[2],x+110,220);
+    ctx.fillText(item[3],x+110,250);
+    canvasButton(x+30,390,160,54,"Choose",()=>startGame(item[0]),"#544329");
+  });
+}
+
+function renderSkillScreen() {
+  ctx.fillStyle="#09090d";
+  ctx.fillRect(0,0,800,600);
+  ctx.fillStyle="#d8b46a";
+  ctx.font="bold 30px Consolas";
+  ctx.textAlign="center";
+  ctx.fillText("SKILL TREE",400,50);
+  ctx.fillStyle="#ddd";
+  ctx.font="16px Consolas";
+  ctx.fillText("Skill points: "+player.skillPoints,400,82);
+  const skills=SKILLS[player.classId];
+  skills.forEach((skill,index)=>{
+    const x=35+index*250;
+    const learned=player.learnedSkills.includes(skill.id);
+    const available=!learned&&(!skill.requires||player.learnedSkills.includes(skill.requires))&&player.skillPoints>=skill.cost;
+    ctx.fillStyle=learned?"#263026":"#222229";
+    ctx.fillRect(x,120,220,340);
+    ctx.strokeStyle=learned?"#9bcf78":"#554832";
+    ctx.strokeRect(x,120,220,340);
+    ctx.fillStyle="#d8b46a";
+    ctx.font="bold 18px Consolas";
+    ctx.fillText(skill.name,x+110,160);
+    ctx.fillStyle="#ddd";
+    ctx.font="15px Consolas";
+    const words=skill.desc.split(" ");
+    let line="",lineY=210;
+    words.forEach(word=>{
+      const test=line?(line+" "+word):word;
+      if(ctx.measureText(test).width>190){ctx.fillText(line,x+110,lineY);line=word;lineY+=22;}else line=test;
+    });
+    if(line) ctx.fillText(line,x+110,lineY);
+    canvasButton(x+30,390,160,50,learned?"Learned":(!skill.requires||player.learnedSkills.includes(skill.requires)?"Learn ("+skill.cost+" pt)":"Locked"),available?()=>learnSkill(skill.id):()=>{},available?"#544329":"#333238");
+  });
+  canvasButton(310,520,180,44,"Return to dungeon",closeSkills);
+}
+
+function renderDungeon() {
+  ctx.fillStyle="#09090d";
+  ctx.fillRect(0,0,800,600);
   for(let y=0;y<H;y++) {
     for(let x=0;x<W;x++) {
       if(!explored[y][x]) continue;
-
-      let v=visible[y][x];
-      let tile=map[y][x];
-      let px=x*TILE, py=y*TILE;
-
-      ctx.fillStyle=v ?
-        (tile===1?COLORS.wall:COLORS.floor) :
-        COLORS.explored;
+      let v=visible[y][x], tile=map[y][x], px=x*TILE, py=y*TILE;
+      ctx.fillStyle=v?(tile===1?COLORS.wall:COLORS.floor):COLORS.explored;
       ctx.fillRect(px,py,TILE,TILE);
-
-      if(v&&tile===2) {
-        drawText(">",px,py,COLORS.stairs);
-      }
-
-      if(v&&tile===1) {
-        ctx.fillStyle="#706b75";
-        ctx.fillRect(px+3,py+3,2,2);
-      }
+      if(v&&tile===2) drawText(">",px,py,COLORS.stairs);
+      if(v&&tile===1){ctx.fillStyle="#706b75";ctx.fillRect(px+3,py+3,2,2);}
     }
   }
-
-  for(let item of items) {
-    if(visible[item.y]?.[item.x]) {
-      let symbols={gold:"$",potion:"!",weapon:"/"};
-      let colors={gold:COLORS.gold,potion:COLORS.potion,weapon:"#9c9be9"};
-      drawText(symbols[item.type],item.x*TILE,item.y*TILE,colors[item.type]);
-    }
+  for(let item of items) if(visible[item.y]?.[item.x]) {
+    const symbols={gold:"$",potion:"!",weapon:"/"};
+    const colors={gold:COLORS.gold,potion:COLORS.potion,weapon:"#9c9be9"};
+    drawText(symbols[item.type],item.x*TILE,item.y*TILE,colors[item.type]);
   }
-
-  for(let m of monsters) {
-    if(visible[m.y]?.[m.x]) {
-      drawText(m.symbol,m.x*TILE,m.y*TILE,
-        m.type==="goblin"?COLORS.goblin:COLORS.orc);
-    }
-  }
-
+  for(let m of monsters) if(visible[m.y]?.[m.x]) drawText(m.symbol,m.x*TILE,m.y*TILE,m.type=== "goblin"?COLORS.goblin:COLORS.orc);
   drawText("@",player.x*TILE,player.y*TILE,COLORS.player);
+}
 
+function renderGameScreen() {
+  renderDungeon();
   if(gameOver) {
-    ctx.fillStyle="rgba(0,0,0,0.8)";
-    ctx.fillRect(0,0,canvas.width,canvas.height);
+    ctx.fillStyle="rgba(0,0,0,.82)";
+    ctx.fillRect(0,0,800,600);
     ctx.fillStyle="#e66b6b";
     ctx.font="bold 38px Consolas";
     ctx.textAlign="center";
-    ctx.fillText("YOU HAVE DIED",400,260);
-    ctx.fillStyle="#ddd";
-    ctx.font="18px Consolas";
-    ctx.fillText("Press R to begin again",400,305);
-    ctx.textAlign="left";
+    ctx.fillText("YOU HAVE DIED",400,280);
+    canvasButton(300,320,200,54,"New run",openClassModal);
   }
+}
+
+function render() {
+  canvasActions=[];
+  ctx.textAlign="left";
+  ctx.textBaseline="alphabetic";
+  if(canvasScreen==="class") renderClassScreen();
+  else if(canvasScreen==="skills"&&player) renderSkillScreen();
+  else if(player) renderGameScreen();
 }
 
 function drawText(char,x,y,color) {
@@ -438,11 +577,55 @@ function drawText(char,x,y,color) {
   ctx.fillText(char,x+2,y);
 }
 
-document.querySelectorAll("[data-action]").forEach(button=>{
+let swipeStart=null;
+
+function canvasPoint(event) {
+  const rect=canvas.getBoundingClientRect();
+  return {
+    x:(event.clientX-rect.left)*(canvas.width/rect.width),
+    y:(event.clientY-rect.top)*(canvas.height/rect.height)
+  };
+}
+
+canvas.addEventListener("pointerdown",e=>{
+  e.preventDefault();
+  const point=canvasPoint(e);
+  const hit=canvasActions.find(action=>
+    point.x>=action.x&&point.x<=action.x+action.w&&
+    point.y>=action.y&&point.y<=action.y+action.h
+  );
+  if(hit) {
+    hit.action();
+    return;
+  }
+  if(canvasScreen==="game"&&!gameOver) {
+    swipeStart={x:e.clientX,y:e.clientY};
+  }
+  canvas.setPointerCapture?.(e.pointerId);
+},{passive:false});
+
+canvas.addEventListener("pointerup",e=>{
+  e.preventDefault();
+  if(!swipeStart||canvasScreen!=="game"||gameOver) { swipeStart=null; return; }
+  const dx=e.clientX-swipeStart.x;
+  const dy=e.clientY-swipeStart.y;
+  swipeStart=null;
+  if(Math.max(Math.abs(dx),Math.abs(dy))<24) return;
+  if(Math.abs(dx)>Math.abs(dy)) move(dx>0?1:-1,0);
+  else move(0,dy>0?1:-1);
+},{passive:false});
+
+canvas.addEventListener("pointercancel",()=>{swipeStart=null;});
+
+window.addEventListener("orientationchange",()=>{
+  updateUI();
+  render();
+});
+
+document.querySelectorAll(".touch-controls [data-action]").forEach(button=>{
   button.addEventListener("pointerdown",e=>{
     e.preventDefault();
     if(gameOver) return;
-
     const action=button.dataset.action;
     if(action==="up") move(0,-1);
     else if(action==="down") move(0,1);
@@ -454,24 +637,8 @@ document.querySelectorAll("[data-action]").forEach(button=>{
   });
 });
 
-let swipeStart=null;
-canvas.addEventListener("pointerdown",e=>{
-  swipeStart={x:e.clientX,y:e.clientY};
-  canvas.setPointerCapture?.(e.pointerId);
-});
-canvas.addEventListener("pointerup",e=>{
-  if(!swipeStart||gameOver) { swipeStart=null; return; }
-  const dx=e.clientX-swipeStart.x;
-  const dy=e.clientY-swipeStart.y;
-  swipeStart=null;
-  if(Math.max(Math.abs(dx),Math.abs(dy))<24) return;
-  if(Math.abs(dx)>Math.abs(dy)) move(dx>0?1:-1,0);
-  else move(0,dy>0?1:-1);
-});
-
-window.addEventListener("orientationchange",()=>{
-  updateUI();
-  render();
+window.addEventListener("beforeunload",()=>{
+  if(canvasScreen==="game"||canvasScreen==="skills") saveGame();
 });
 
 document.addEventListener("keydown",e=>{
@@ -496,3 +663,4 @@ document.addEventListener("keydown",e=>{
 });
 
 openClassModal();
+updateResumeButtons();
